@@ -1,5 +1,7 @@
 # Tailscale Fleet Watchdog
 
+[![CI](https://github.com/tylerbcrawford/tailscale-fleet-watchdog/actions/workflows/ci.yml/badge.svg)](https://github.com/tylerbcrawford/tailscale-fleet-watchdog/actions/workflows/ci.yml)
+
 **Catches the silent failure mode of a small tailnet: a node key that expires while the daemon keeps running.**
 
 Two small Bash scripts, one shared alert state machine, a Discord webhook, and a test suite. Runs on Linux (cron) and macOS (launchd) with nothing more than `bash`, `jq`, and `curl`.
@@ -120,7 +122,7 @@ For nodes that should never expire, disable key expiry in the admin console: **M
 
 ## Testing
 
-`tests/run.sh` runs 22 assertions against fixtures with placeholder timestamps rendered at run time (so "expires in 7 days" is always 7 days from *now*). Both scripts accept `--status-from-file` / `--devices-from-file`, which switches on dry-run mode and bypasses the CLI and API entirely.
+`tests/run.sh` runs 22 assertions in CI on both Ubuntu and macOS (bash 3.2, BSD `date`), plus shellcheck. It runs against fixtures with placeholder timestamps rendered at run time (so "expires in 7 days" is always 7 days from *now*). Both scripts accept `--status-from-file` / `--devices-from-file`, which switches on dry-run mode and bypasses the CLI and API entirely.
 
 ## Two bugs the tests did not catch
 

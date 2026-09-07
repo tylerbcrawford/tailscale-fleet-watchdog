@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: tests (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # macOS runner ships bash 3.2 and BSD date — the portability claim is tested, not assumed.
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain
+        run: |
+          bash --version | head -1
+          jq --version
+      - name: Unit tests
+        run: bash tests/run.sh
+      - name: Dry-run against a fixture (no Tailscale daemon needed)
+        run: |
+          TS_WATCHDOG_CONFIG=/dev/null \
+          TS_MONITOR_STATE_FILE="$RUNNER_TEMP/state.json" \
+          bin/tailscale-self-check.sh --status-from-file tests/fixtures/status-running.json
+
+  shellcheck:
+    name: shellcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: shellcheck
+        run: shellcheck -S warning bin/*.sh lib/*.sh tests/*.sh
