@@ -1,0 +1,60 @@
+{
+  "Version": "1.96.0",
+  "TUN": true,
+  "BackendState": "Running",
+  "HaveNodeKey": true,
+  "AuthURL": "",
+  "TailscaleIPs": ["100.100.0.1"],
+  "Self": {
+    "ID": "n0000000001CNTRL",
+    "HostName": "media-server",
+    "DNSName": "media-server.example.ts.net.",
+    "OS": "linux",
+    "TailscaleIPs": ["100.100.0.1"],
+    "Online": true,
+    "ExitNode": false,
+    "ExitNodeOption": false,
+    "InNetworkMap": true,
+    "KeyExpiry": "2999-01-01T00:00:00Z"
+  },
+  "MagicDNSSuffix": "example.ts.net",
+  "CurrentTailnet": {
+    "Name": "user@example.com",
+    "MagicDNSSuffix": "example.ts.net",
+    "MagicDNSEnabled": true
+  },
+  "Peer": {
+    "nodekey:0000000000000000000000000000000000000000000000000000000000000002": {
+      "ID": "n0000000002CNTRL",
+      "HostName": "vps",
+      "DNSName": "vps.example.ts.net.",
+      "OS": "linux",
+      "TailscaleIPs": ["100.100.0.2"],
+      "Online": true,
+      "KeyExpiry": "2999-01-01T00:00:00Z"
+    },
+    "nodekey:0000000000000000000000000000000000000000000000000000000000000003": {
+      "ID": "n0000000003CNTRL",
+      "HostName": "mac-mini",
+      "DNSName": "mac-mini.example.ts.net.",
+      "OS": "macOS",
+      "TailscaleIPs": ["100.100.0.3"],
+      "Online": true,
+      "KeyExpiry": "2999-01-01T00:00:00Z"
+    },
+    "nodekey:0000000000000000000000000000000000000000000000000000000000000004": {
+      "ID": "n0000000004CNTRL",
+      "HostName": "laptop",
+      "DNSName": "laptop.example.ts.net.",
+      "OS": "macOS",
+      "TailscaleIPs": ["100.100.0.4"],
+      "Online": false,
+      "LastSeen": "2026-05-03T05:10:01Z",
+      "Expired": true,
+      "KeyExpiry": "2026-05-04T22:59:42Z"
+    }
+  },
+  "User": {
+    "1": { "ID": 1, "LoginName": "user@example.com", "DisplayName": "Example User" }
+  }
+}

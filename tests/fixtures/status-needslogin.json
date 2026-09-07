@@ -1,0 +1,7 @@
+{
+  "BackendState": "NeedsLogin",
+  "Self": {
+    "HostName": "media-server",
+    "KeyExpiry": "2026-08-01T00:00:00Z"
+  }
+}

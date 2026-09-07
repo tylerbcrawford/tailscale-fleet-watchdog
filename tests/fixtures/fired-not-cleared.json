@@ -1,0 +1,12 @@
+{
+  "schema_version": 1,
+  "alerts": {
+    "media-server:backend-not-running": {
+      "first_fired_at": "2026-05-05T08:00:00Z",
+      "last_fired_at": "2026-05-05T08:00:00Z",
+      "cleared": false,
+      "cleared_at": null,
+      "context": {"backend_state": "NeedsLogin"}
+    }
+  }
+}

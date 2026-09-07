@@ -1,0 +1,32 @@
+{
+  "devices": [
+    {
+      "name": "media-server.example.ts.net",
+      "hostname": "media-server",
+      "keyExpiryDisabled": true,
+      "expires": "0001-01-01T00:00:00Z",
+      "lastSeen": "RECENT_PLACEHOLDER"
+    },
+    {
+      "name": "vps.example.ts.net",
+      "hostname": "vps",
+      "keyExpiryDisabled": true,
+      "expires": "0001-01-01T00:00:00Z",
+      "lastSeen": "RECENT_PLACEHOLDER"
+    },
+    {
+      "name": "mac-mini.example.ts.net",
+      "hostname": "mac-mini",
+      "keyExpiryDisabled": true,
+      "expires": "0001-01-01T00:00:00Z",
+      "lastSeen": "OFFLINE_30H_PLACEHOLDER"
+    },
+    {
+      "name": "laptop.example.ts.net",
+      "hostname": "laptop",
+      "keyExpiryDisabled": false,
+      "expires": "2026-08-01T00:00:00Z",
+      "lastSeen": "OLD_PLACEHOLDER"
+    }
+  ]
+}
