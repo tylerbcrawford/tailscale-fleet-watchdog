@@ -17,6 +17,7 @@ fail() { echo "  FAIL: $1"; exit 1; }
 
 export TS_MONITOR_STATE_FILE="$TMPDIR/state.json"
 cp "$FIXTURES/corrupt-state.json" "$TS_MONITOR_STATE_FILE"
+# shellcheck source=/dev/null
 source "$LIB"
 
 echo "Test 1: corrupt state file is reset to empty + meta:state-reset fires once"
@@ -30,9 +31,9 @@ pass "corrupt state file reset cleanly with single meta:state-reset alert"
 
 echo "Test 2: subsequent runs do not re-fire meta:state-reset"
 cp "$FIXTURES/corrupt-state.json" "$TS_MONITOR_STATE_FILE"
-> "$DISCORD_TEST_LOG"
+: > "$DISCORD_TEST_LOG"
 fire_alert "media-server:key-expiring-soon" "12 days left"  # First call: triggers reset
-> "$DISCORD_TEST_LOG"
+: > "$DISCORD_TEST_LOG"
 fire_alert "media-server:cli-failed" "different alert"      # Second call: should not re-fire reset
 grep -q "state-reset" "$DISCORD_TEST_LOG" && fail "meta:state-reset should not re-fire"
 pass "meta:state-reset deduped after first reset"
