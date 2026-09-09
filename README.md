@@ -21,9 +21,27 @@ ssh: connect to host 100.x.y.z port 22: Connection timed out
 
 Nothing had changed. `tailscaled` was running. The machine was up. From the rest of the fleet the node showed as `offline, last seen 2d ago`.
 
-The cause was Tailscale's default **90-day node key expiry**. The key had lapsed, the daemon stayed running but the control plane rejected its packets, and the only signal was an email reminder sent weeks earlier that got missed. A laptop on the same tailnet had failed the same way, unnoticed, because "offline" is normal for a laptop.
+The cause was Tailscale's default **90-day node key expiry**. The key had lapsed. The daemon kept running, but Tailscale's coordination server no longer accepted the node, and the only warning had been an email sent weeks earlier that got missed. A laptop on the same tailnet had failed the same way, unnoticed, because "offline" is normal for a laptop.
 
-Reauthenticating fixed it in thirty seconds. The real problem was that nothing *in-band* had detected it. This repo is the detection gap, closed.
+Logging the node back in fixed it in thirty seconds. The real problem was that nothing on the machines themselves had noticed. This repo closes that gap.
+
+## Doesn't Tailscale already do this?
+
+Partly, and you should turn those features on first:
+
+- **Disable key expiry** on machines that should never expire (**Machines → ⋯ → Disable key expiry**). This removes the root cause for servers.
+- **Tailscale webhooks** (**Settings → Webhooks**) can post `nodeKeyExpiringInOneDay` and `nodeKeyExpired` events straight to Discord, Slack, Google Chat, or Mattermost.
+
+What the watchdog adds on top:
+
+| Gap | Why it matters |
+|---|---|
+| Warning 14 days out, not 1 day | One day is not enough if you are travelling or the message lands at 3 am. |
+| Always-on node has gone **offline** | Tailscale has no webhook event for a node dropping off the network. The fleet audit checks `lastSeen` for the nodes you list. |
+| Someone **re-enabled expiry** on a server | No event for this either. The audit flags it before the key ever gets close to expiring. |
+| Checks run on the nodes themselves | The self-check does not depend on Tailscale's coordination server being reachable, and alerts are deduplicated so you get one message per problem, not one per day. |
+
+If you only care about the expiry warning, a webhook plus disabled expiry is enough. The watchdog is for the "server quietly fell off the tailnet" case.
 
 ## What it watches
 
@@ -39,13 +57,13 @@ Reauthenticating fixed it in thirty seconds. The real problem was that nothing *
 | API health | fleet-audit | `audit:api-failed` | OAuth token or `/devices` call fails, times out, or returns non-JSON |
 | State corruption | both | `meta:state-reset` | The JSON state file was unreadable and has been reset |
 
-Laptops and phones are excluded from fleet checks **by configuration** (`ALWAYS_ON_NODES`), not by code. Their keys should keep expiring; that is the security boundary working as intended.
+Laptops and phones are left out of the fleet checks by leaving them off the `ALWAYS_ON_NODES` list. Their keys should keep expiring; that is the security feature working as intended.
 
 ## Design
 
 ### Alerts fire on transitions, not on schedule
 
-Each condition has a key. The first time a condition is observed, one alert is posted and the key is recorded as open in a JSON state file. Subsequent runs that see the same condition only bump `last_fired_at`; nothing is posted. When the condition clears, the key is marked cleared silently and the next occurrence fires again. There is no daily nag and no "all green" heartbeat.
+Each condition has a key. The first time a condition is seen, one alert is posted and the key is recorded as open in a JSON state file. Later runs that see the same condition only update `last_fired_at`; nothing is posted. When the condition goes away, the key is marked cleared without a message, and the next time it happens it fires again. There is no daily nag and no "all green" heartbeat.
 
 ```json
 {
@@ -71,12 +89,12 @@ If the fleet audit only ran on the main server and *that* server's daemon was th
 
 ### Fleet view comes from the REST API, not from peers
 
-`tailscale status` on one node shows what *that* node knows about its peers. The fleet audit instead mints a short-lived bearer token with an OAuth client (`devices:read` scope) and reads `GET /api/v2/tailnet/-/devices`, which is the control plane's view: `lastSeen`, `expires`, and `keyExpiryDisabled` per device.
+`tailscale status` on one node only shows what *that* node knows about its peers. The fleet audit instead uses an OAuth client (`devices:read` scope) to get a short-lived access token and reads `GET /api/v2/tailnet/-/devices`. That is the coordination server's own view of every device: `lastSeen`, `expires`, and `keyExpiryDisabled`.
 
 ### Same script on Linux and macOS
 
 - **bash 3.2** on macOS: no associative arrays, no `mapfile`.
-- **No `flock` on macOS**: the lock is best-effort via `command -v flock`. A daily cron cannot race itself.
+- **No `flock` on macOS**: the lock is used when available and skipped otherwise. A daily job cannot overlap with itself.
 - **GNU vs BSD `date`**: detected once at startup; ISO-8601 → epoch math uses the right flavour.
 - **CLI location**: on macOS the binary lives inside `Tailscale.app`; set `TAILSCALE_BIN`.
 - **Scheduling**: crontab on Linux, a `launchd` plist on macOS (`launchd/`).
@@ -118,19 +136,19 @@ launchctl load -w ~/Library/LaunchAgents/com.example.tailscale-self-check.plist
 
 ### And fix the root cause
 
-For nodes that should never expire, disable key expiry in the admin console: **Machines → ⋯ → Disable key expiry**. The watchdog's `expiry-config-drifted` check then tells you if that setting is ever flipped back.
+For nodes that should never expire, disable key expiry in the admin console (see above). The watchdog's `expiry-config-drifted` check then tells you if that setting is ever flipped back.
 
 ## Testing
 
-`tests/run.sh` runs 22 assertions in CI on both Ubuntu and macOS (bash 3.2, BSD `date`), plus shellcheck. It runs against fixtures with placeholder timestamps rendered at run time (so "expires in 7 days" is always 7 days from *now*). Both scripts accept `--status-from-file` / `--devices-from-file`, which switches on dry-run mode and bypasses the CLI and API entirely.
+`tests/run.sh` runs 22 assertions in CI on both Ubuntu and macOS (bash 3.2, BSD `date`), plus shellcheck. The test fixtures use placeholder timestamps that are filled in at run time, so "expires in 7 days" is always 7 days from *now*. Both scripts accept `--status-from-file` / `--devices-from-file`, which turns on dry-run mode and skips the CLI and API entirely.
 
 ## Two bugs the tests did not catch
 
-Both were invisible to the unit suite because the fixture path skips the real-API code path. Recorded here because they are the interesting part.
+Both slipped past the test suite because the fixture path skips the real CLI and API code. Recorded here because they are the interesting part.
 
-**1. A `while read` loop that never finished.** The device loop was originally `echo "$json" | jq -c '.devices[]' | while read -r dev; do … done`. The pipe runs the loop body in a *subshell*. The parent shell had already taken an `flock` on fd 9 (from clearing `audit:api-failed`) and never released it; the subshell inherited the locked descriptor and blocked on `flock 9` forever. The cron job hung until `timeout` killed it. Fix: process substitution (`done < <(…)`) keeps the loop in the main shell. It's the same subshell trap that bites `echo | while read` in hook scripts.
+**1. A `while read` loop that never finished.** The device loop was originally `echo "$json" | jq -c '.devices[]' | while read -r dev; do … done`. A pipe runs the loop body in a *subshell*. The parent shell already held a `flock` on file descriptor 9 (from clearing `audit:api-failed`) and never released it. The subshell inherited that lock and then waited on it forever. The cron job hung until `timeout` killed it. Fix: process substitution (`done < <(…)`) keeps the loop in the main shell.
 
-**2. Matching on the wrong name.** `ALWAYS_ON_NODES` was compared against each device's `.hostname`. That field is the OS hostname, which is `Media-SERVER` on one box, `M2 Mini` on another, and literally `localhost` on an iPhone. Two of three always-on nodes silently never matched, so the audit was watching one machine and reporting success. Fix: match the first label of `.name`, the MagicDNS name, which is always lowercase and always what you typed into the config.
+**2. Matching on the wrong name.** `ALWAYS_ON_NODES` was compared against each device's `.hostname`. That field is the OS hostname, which is `Media-SERVER` on one box, `M2 Mini` on another, and literally `localhost` on an iPhone. Two of three always-on nodes never matched, so the audit was watching one machine and reporting success. Fix: match the first part of `.name`, the MagicDNS name, which is always lowercase and always what you typed into the config.
 
 ## Requirements
 
