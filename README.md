@@ -4,6 +4,8 @@
 
 **Catches the silent failure mode of a small tailnet: a node key that expires while the daemon keeps running.**
 
+> **Built with Claude Code.** I set the requirements and the architecture, made the design decisions, and run it on every node of my tailnet. The agent wrote most of the code under my direction.
+
 Two small Bash scripts, one shared alert state machine, a Discord webhook, and a test suite. Runs on Linux (cron) and macOS (launchd) with nothing more than `bash`, `jq`, and `curl`.
 
 ```
