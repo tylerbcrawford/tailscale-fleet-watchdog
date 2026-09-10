@@ -21,7 +21,7 @@ ssh: connect to host 100.x.y.z port 22: Connection timed out
 
 Nothing had changed. `tailscaled` was running. The machine was up. From the rest of the fleet the node showed as `offline, last seen 2d ago`.
 
-The cause was Tailscale's default **90-day node key expiry**. The key had lapsed. The daemon kept running, but Tailscale's coordination server no longer accepted the node, and the only warning had been an email sent weeks earlier that got missed. A laptop on the same tailnet had failed the same way, unnoticed, because "offline" is normal for a laptop.
+The cause was Tailscale's default **180-day node key expiry**. The key had lapsed. The daemon kept running, but Tailscale's coordination server no longer accepted the node, and the only warning had been an email sent weeks earlier that got missed. A laptop on the same tailnet had failed the same way, unnoticed, because "offline" is normal for a laptop.
 
 Logging the node back in fixed it in thirty seconds. The real problem was that nothing on the machines themselves had noticed. This repo closes that gap.
 
